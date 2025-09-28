@@ -57,6 +57,17 @@ def benchmark(test_cases: List[Tuple[str, np.ndarray, np.ndarray, float]], solve
     """
     Also returns the average of each function over all test cases
     """
+    def measure(pred: List[int], truth: List[int]) -> float:
+        p = set(pred)
+        t = set(truth)
+        tp = len(p & t)
+        fp = len(p - t)
+        fn = len(t - p)
+        print(tp, fp, fn)
+        p = tp/(tp + fp) if (tp + fp) > 0 else 0
+        r = tp/(tp + fn) if (tp + fn) > 0 else 0
+        return (2*p*r/(p+r))*100 if (p+r) > 0 else 0.0
+
     averages = {}
     rows = []
     for solver, func in solvers:
@@ -112,7 +123,7 @@ def create_infeasible_system(m: int, n: int, bad : int):
         new_A_row = combination_coeffs @ A[:num_consistent_base, :]
         
         consistent_b_value = combination_coeffs @ b[:num_consistent_base]
-        inconsistent_b_value = consistent_b_value + (np.random.rand() + 0.5)
+        inconsistent_b_value = consistent_b_value + (np.random.rand() + 0.5) * np.sign(np.random.randn())
         A[i, :] = new_A_row
         b[i] = inconsistent_b_value
         
@@ -135,29 +146,26 @@ def create_sparse_infeasible_system(m: int, n: int, bad : int, density: float = 
         
 
         consistent_b_value = combination_coeffs @ b[:num_consistent_base]
-        inconsistent_b_value = consistent_b_value + (np.random.rand() + 0.5)
+        inconsistent_b_value = consistent_b_value + (np.random.rand() + 0.5) * np.sign(np.random.randn())
 
         A[i, :] = new_A_row
         b[i] = inconsistent_b_value
         
     return A.toarray(), b
 
-
-
-
 #tests
 if __name__ == "__main__":
 
     sizes = [(1000, 1000)]
-    NUM = 2
+    NUM = 1
     complete_averages = {}
-    bads = [20, 50, 80, 110] 
+    bads = [37] 
     id = 0
     cases = []
     for bad in bads:
         for _ in range(NUM):
             for (m, n) in sizes:
-                A, b = create_infeasible_system(n, m, bad)
+                A, b = create_infeasible_system(m, n, bad)
                 cases.append((f"rand_{m}x{n}_seed{id}", A, b, bad))
                 A, b = create_sparse_infeasible_system(m, n, bad)
                 cases.append((f"sparse_{m}x{n}_seed{id}", A, b, bad))
