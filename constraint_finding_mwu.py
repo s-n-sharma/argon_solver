@@ -21,7 +21,7 @@ def l1_dual_via_linprog(A: np.ndarray, b: np.ndarray) -> Optional[np.ndarray]:
     bounds_x = [(None, None)] * n
     bounds_r = [(0, None)] * (2 * m)
     bounds = bounds_x + bounds_r
-    res = linprog(c, A_eq=A_eq, b_eq=b, bounds=bounds, method='highs')
+    res = linprog(c, A_eq=A_eq, b_eq=b, bounds=bounds, method='highs-ds')
     if not res.success:
         return None
     try:
@@ -85,6 +85,7 @@ def mwu_dual_solve(
     b = np.asarray(b).reshape(-1)
     m, n = A.shape
 
+
     # Precompute thin column-space basis for fast projection
     Q = _thin_colspace_basis(A)
     def proj_null(yv: np.ndarray) -> np.ndarray:
@@ -95,7 +96,7 @@ def mwu_dual_solve(
 
     y = np.zeros(m)
     if eta is None:
-        eta = 0.9 / (np.linalg.norm(b) + 1e-9)
+        eta = 0.9 / (np.linalg.norm(b) + 1e-9) * 5
 
     for t in range(1, steps + 1):
         # Ascent step on linear objective b^T y
@@ -148,7 +149,7 @@ def l1_error(A: np.ndarray, b: np.ndarray) -> float:
     bounds_x = [(None, None)] * n
     bounds_r = [(0, None)] * (2 * m)
     bounds = bounds_x + bounds_r
-    res = linprog(c, A_eq=A_eq, b_eq=b, bounds=bounds, method='highs')
+    res = linprog(c, A_eq=A_eq, b_eq=b, bounds=bounds, method='highs-ds')
     return float(res.fun) if res.success else float('inf')
 
 
@@ -247,6 +248,41 @@ def benchmark(
 
     def exact(pred: List[int], truth: List[int]) -> bool:
         return set(pred) == set(truth)
+    
+    def measure(pred: List[int], truth: List[int]) -> float:
+        p = set(pred)
+        t = set(truth)
+        tp = len(p & t)
+        fp = len(p - t)
+        fn = len(t - p)
+        print(tp, fp, fn)
+        p = tp/(tp + fp) if (tp + fp) > 0 else 0
+        r = tp/(tp + fn) if (tp + fn) > 0 else 0
+        return (2*p*r/(p+r))*100 if (p+r) > 0 else 0.0
+    
+    def scorer(A, b, bad_idx):
+        """
+        Returns the L1 error score after removing the predicted bad indices.
+        """
+        if not bad_idx:
+            return l1_error(A, b)
+        A_tmp = np.delete(A, bad_idx, axis=0)
+        b_tmp = np.delete(b, bad_idx)
+        ret = l1_error(A_tmp, b_tmp)
+        print(ret)
+        return ret
+    
+    def L2_scorer(A, b, bad_idx):
+        """
+        Returns the L2 error score after removing the predicted bad indices.
+        """
+        if not bad_idx:
+            return np.linalg.norm(b - A @ np.linalg.lstsq(A, b, rcond=None)[0])
+        A_tmp = np.delete(A, bad_idx, axis=0)
+        b_tmp = np.delete(b, bad_idx)
+        ret = np.linalg.norm(b_tmp - A_tmp @ np.linalg.lstsq(A_tmp, b_tmp, rcond=None)[0])
+        print(ret)
+        return ret
 
     for name, A, b, bad_idx in test_cases:
         # Baseline linprog duals
@@ -263,6 +299,13 @@ def benchmark(
         t0 = time.perf_counter()
         pred_hyb = find_conflicts_hybrid(A, b, rel_threshold=rel_threshold, tol=tol)
         t3 = time.perf_counter() - t0
+
+        #measuring the results
+        linprog_score = L2_scorer(A, b, bad_idx)
+        mwu_score = L2_scorer(A, b, bad_idx)
+        hybrid_score = L2_scorer(A, b, bad_idx)
+        
+        
 
         row = {
             'case': name,
@@ -281,6 +324,9 @@ def benchmark(
             'linprog_time': t1,
             'mwu_time': t2,
             'hybrid_time': t3,
+            'linprog_score': linprog_score,
+            'mwu_score': mwu_score,
+            'hybrid_score': hybrid_score,
         }
         rows.append(row)
         sums['linprog_time'] += t1
@@ -302,10 +348,10 @@ def benchmark(
 if __name__ == "__main__":
     # Build a few test cases
     cases: List[Tuple[str, np.ndarray, np.ndarray, List[int]]] = []
-    sizes = [(10000, 100)]
+    sizes = [(1000, 200)]
     seed = 1
     for m, n in sizes:
-        for bad in [1, 2, 3]:
+        for bad in [10]:
             A, b, bad_idx = create_infeasible_system(m, n, bad, seed=seed)
             seed += 1
             cases.append((f"dense_{m}x{n}_bad{bad}", A, b, bad_idx))
@@ -317,9 +363,9 @@ if __name__ == "__main__":
     print("-" * 72)
     for r in rows:
         print(f"Case: {r['case']} (m={r['m']}, n={r['n']}, truth={r['truth_count']})")
-        print(f"  linprog: time={r['linprog_time']:.6f}s, correct={r['linprog_exact']}")
-        print(f"  mwu    : time={r['mwu_time']:.6f}s, correct={r['mwu_exact']}")
-        print(f"  hybrid : time={r['hybrid_time']:.6f}s, correct={r['hybrid_exact']}")
+        print(f"  linprog: time={r['linprog_time']:.6f}s, score={r['linprog_score']}, count={r['linprog_pred_count']}, exact={r['linprog_exact']}")
+        print(f"  mwu    : time={r['mwu_time']:.6f}s, score={r['mwu_score']}, count={r['mwu_pred_count']}, exact={r['mwu_exact']}")
+        print(f"  hybrid : time={r['hybrid_time']:.6f}s, score={r['hybrid_score']}, count={r['hybrid_pred_count']}, exact={r['hybrid_exact']}")
         print()
 
     n = max(1, len(rows))
