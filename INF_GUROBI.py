@@ -1,7 +1,8 @@
 import numpy as np
 import scipy
 from scipy import sparse
-from scipy.optimize import linprog
+import gurobipy as gp
+from gurobipy import GRB
 import time
 from typing import List, Tuple, Optional, Callable, Dict
 import pandas as pd
@@ -9,19 +10,35 @@ import pandas as pd
 # ---------------- Core Helper Functions ---------------- #
 
 def l1_dual_via_linprog_weighted(A: np.ndarray, b: np.ndarray, weights: np.ndarray) -> Optional[np.ndarray]:
-    """Helper: Solves a WEIGHTED L1 LP to return the duals."""
+    """Helper: Solves a WEIGHTED L1 LP to return the duals using Gurobi."""
     A = np.asarray(A)
     b = np.asarray(b).reshape(-1)
+    weights = np.asarray(weights).reshape(-1)
     m, n = A.shape
-    c = np.concatenate([np.zeros(n), weights, weights]) # Use weights in the objective
-    I = np.eye(m)
-    A_eq = np.hstack([A, -I, I])
-    bounds_x = [(None, None)] * n
-    bounds_r = [(0, None)] * (2 * m)
-    bounds = bounds_x + bounds_r
-    res = linprog(c, A_eq=A_eq, b_eq=b, bounds=bounds, method='highs')
-    if not res.success: return None
-    return np.asarray(res.eqlin.marginals, dtype=float)
+    if m == 0: return np.array([])
+
+    try:
+        # Use quiet=True to suppress the license banner
+        with gp.Env(empty=False) as env:
+            env.start()
+            with gp.Model(env=env) as model:
+                model.setParam('OutputFlag', 0)
+                
+                x = model.addMVar(shape=n, lb=-GRB.INFINITY, name="x")
+                r_pos = model.addMVar(shape=m, name="r_pos")
+                r_neg = model.addMVar(shape=m, name="r_neg")
+
+                model.setObjective(weights @ r_pos + weights @ r_neg, GRB.MINIMIZE)
+                eq_constrs = model.addConstr(A @ x - r_pos + r_neg == b, name="eq")
+                
+                model.optimize()
+
+                if model.Status == GRB.OPTIMAL:
+                    return np.array(eq_constrs.Pi, dtype=float)
+                else:
+                    return None
+    except gp.GurobiError:
+        return None
 
 def l1_dual_via_linprog(A: np.ndarray, b: np.ndarray) -> Optional[np.ndarray]:
     """Helper: Solves the standard L1 LP once to return the equality duals."""
@@ -29,14 +46,34 @@ def l1_dual_via_linprog(A: np.ndarray, b: np.ndarray) -> Optional[np.ndarray]:
     return l1_dual_via_linprog_weighted(A, b, weights)
 
 def l1_error(A: np.ndarray, b: np.ndarray) -> float:
-    """Helper: Returns the minimum L1 error ||Ax - b||_1 for a system."""
-    A = np.asarray(A); b = np.asarray(b).reshape(-1); m, n = A.shape
+    """Helper: Returns the minimum L1 error ||Ax - b||_1 for a system using Gurobi."""
+    A = np.asarray(A)
+    b = np.asarray(b).reshape(-1)
+    m, n = A.shape
     if m == 0: return 0.0
-    c = np.concatenate([np.zeros(n), np.ones(2 * m)])
-    I = np.eye(m); A_eq = np.hstack([A, -I, I])
-    bounds_x = [(None, None)] * n; bounds_r = [(0, None)] * (2 * m)
-    res = linprog(c, A_eq=A_eq, b_eq=b, bounds=bounds_x + bounds_r, method='highs')
-    return float(res.fun) if res.success else float('inf')
+
+    try:
+        # Use quiet=True to suppress the license banner
+        with gp.Env(quiet=True) as env:
+            env.start()
+            with gp.Model(env=env) as model:
+                model.setParam('OutputFlag', 0)
+                
+                x = model.addMVar(shape=n, lb=-GRB.INFINITY, name="x")
+                r_pos = model.addMVar(shape=m, name="r_pos")
+                r_neg = model.addMVar(shape=m, name="r_neg")
+
+                model.setObjective(r_pos.sum() + r_neg.sum(), GRB.MINIMIZE)
+                model.addConstr(A @ x - r_pos + r_neg == b, name="eq")
+                
+                model.optimize()
+
+                if model.Status == GRB.OPTIMAL:
+                    return float(model.ObjVal)
+                else:
+                    return float('inf')
+    except gp.GurobiError:
+        return float('inf')
 
 def _thin_colspace_basis(A: np.ndarray, tol: float = 1e-10) -> np.ndarray:
     """Helper: Returns a thin orthonormal basis Q for col(A) using SVD."""
@@ -444,8 +481,6 @@ def MWU_find_gradient_regularized(
     threshold = mean_w - 1.5 * std_w
     return [i for i, w in enumerate(main_weights) if w < threshold]
 
-import numpy as np
-
 def COEFAUG(A: np.ndarray, b: np.ndarray) ->List[int]:
     """
     Identifies inconsistent constraints in a linear system Ax = b by iteratively checking matrix ranks.
@@ -500,9 +535,6 @@ def COEFAUG(A: np.ndarray, b: np.ndarray) ->List[int]:
             inconsistent_indices.append(i)
             
     return inconsistent_indices
-
-import numpy as np
-from typing import List
 
 def find_inconsistent_by_residual(A: np.ndarray, b: np.ndarray, tolerance: float = 1e-8) -> List[int]:
     """
@@ -660,9 +692,9 @@ if __name__ == "__main__":
     pd.set_option('display.width', 150); pd.set_option('display.precision', 4)
     
     # Setup for the "hard" test case: overdetermined system with strong, conflicting noise
-    sizes = [(1000, 150)] 
+    sizes = [(300, 300)] 
     NUM_RUNS_PER_SETTING = 2
-    bads = [20, 50, 180, 310] 
+    bads = [20] 
     cases = []
     
     print("Generating test cases with 'fair' ground truth...")
@@ -680,7 +712,7 @@ if __name__ == "__main__":
         ("MWU", MWU_find),
         #("L1_it", L1_find_iterative),
         ("L1IF", L1_find_influence_fast),
-        #("L1AW", L1_find_adaptive_weights)
+        ("L1AW", L1_find_adaptive_weights),
         ("MWUAW", MWU_find_adaptive_weights),
         # ("FIRR", find_inconsistent_by_residual_reordering)
         #("ICR", find_inconsistent_by_residual),
