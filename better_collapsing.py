@@ -1,15 +1,15 @@
 import numpy as np
 import scipy.sparse as sp
 import scipy.linalg
-import scipy.optimize # Added for linprog
+import scipy.optimize
 import networkx as nx
 import json
 
 class GraphBasedSolver:
     """
-    Solves Ax=b using a graph-based method, including identification of
-    conflicting constraints for inconsistent subsystems.
-    [CLASS CODE IS LARGELY THE SAME, WITH L1_find ADDED AND _process_subsystem MODIFIED]
+    Solves Ax=b using a graph-based method, including a minimum-degree
+    heuristic to reduce the core system size without increasing edge count.
+    [CLASS CODE IS LARGELY THE SAME, WITH _process_subsystem MODIFIED]
     """
     def __init__(self, A, b):
         if not sp.issparse(A):
@@ -31,6 +31,7 @@ class GraphBasedSolver:
         self.graph.add_edges_from(edges)
 
     def solve(self):
+        # ... (same as before)
         connected_components = list(nx.connected_components(self.graph))
         connected_components.sort(key=len, reverse=True)
         for i, cc_nodes in enumerate(connected_components):
@@ -38,64 +39,44 @@ class GraphBasedSolver:
             self.subsystem_info.append(info)
         return self.solution, self.subsystem_info
 
-    # --- NEWLY ADDED METHOD ---
     @staticmethod
     def L1_find(A, b, rel_threshold=1-3e-2):
-        """
-        Uses L1 minimization to identify inconsistent constraints in Ax = b.
-        """
-        A = np.asarray(A)
-        b = np.asarray(b)
-        m, n = A.shape
-        c = np.concatenate([np.zeros(n), np.ones(2 * m)])
-        I = np.eye(m)
-        A_eq = np.hstack([A, -I, I])
-        bounds_x = [(None, None)] * n
-        bounds_r = [(0, None)] * (2 * m)
-        bounds = bounds_x + bounds_r
-        # The 'highs' method is generally robust
-        res = scipy.optimize.linprog(c, A_eq=A_eq, b_eq=b, bounds=bounds, method='highs')
-        
-        if not res.success:
-            return None # Solver failed
-        
-        # Dual variables are called 'marginals' for eqlin constraints
+        # ... (same as before)
+        A = np.asarray(A); b = np.asarray(b); m, n = A.shape; c = np.concatenate([np.zeros(n), np.ones(2 * m)])
+        I = np.eye(m); A_eq = np.hstack([A, -I, I]); bounds_x = [(None, None)] * n; bounds_r = [(0, None)] * (2 * m)
+        bounds = bounds_x + bounds_r; res = scipy.optimize.linprog(c, A_eq=A_eq, b_eq=b, bounds=bounds, method='highs')
+        if not res.success: return None
         duals = np.asarray(res.eqlin.marginals, dtype=float)
-        
-        if duals is None or duals.size == 0:
-            return []
-        
+        if duals is None or duals.size == 0: return []
         max_abs = np.max(np.abs(duals))
-        if max_abs == 0:
-            return []
-            
+        if max_abs == 0: return []
         mask = np.abs(duals) >= rel_threshold * max_abs
         return [i for i, flag in enumerate(mask) if flag]
 
     # --- MODIFIED METHOD ---
     def _process_subsystem(self, cc_nodes, cc_id):
-        # 1. & 2. Identification and Peeling (same as before)
+        # 1. Identification (same as before)
         constraint_indices = sorted([n for n in cc_nodes if n < self.m])
         variable_indices = sorted([n - self.m for n in cc_nodes if n >= self.m])
         info = {'id': cc_id, 'num_constraints': len(constraint_indices), 'num_variables': len(variable_indices), 'status': 'unprocessed'}
-        if not constraint_indices or not variable_indices:
-            info['status'] = 'trivial'; return info
+        if not constraint_indices or not variable_indices: info['status'] = 'trivial'; return info
         A_sub = self.A.tocsr()[constraint_indices, :][:, variable_indices].tolil()
         b_sub = self.b[constraint_indices].copy()
         sub_to_orig_var = {i: v for i, v in enumerate(variable_indices)}
         sub_graph = nx.bipartite.from_biadjacency_matrix(A_sub.tocsr())
         sub_solution = np.full(len(variable_indices), np.nan)
         elimination_plan = []
-        # Peeling loop is omitted for brevity but is identical to the previous version
+
+        # 2a. Precondition via standard leaf peeling
         while True:
             if sub_graph.number_of_nodes() == 0: break
             leaves = [node for node, deg in dict(sub_graph.degree()).items() if deg == 1]
             if not leaves: break
+            # ... (Leaf peeling logic is identical to previous version, omitted for brevity)
             constraint_leaves = [n for n in leaves if n < A_sub.shape[0]]
             if constraint_leaves:
                 con_sub_idx = constraint_leaves[0]; var_node_local = list(sub_graph.neighbors(con_sub_idx))[0]; var_sub_idx = var_node_local - A_sub.shape[0]
-                val = b_sub[con_sub_idx] / A_sub[con_sub_idx, var_sub_idx]
-                sub_solution[var_sub_idx] = val
+                val = b_sub[con_sub_idx] / A_sub[con_sub_idx, var_sub_idx]; sub_solution[var_sub_idx] = val
                 for neighbor_con in list(sub_graph.neighbors(var_node_local)):
                     if neighbor_con != con_sub_idx: b_sub[neighbor_con] -= A_sub[neighbor_con, var_sub_idx] * val
                 sub_graph.remove_node(var_node_local)
@@ -103,68 +84,85 @@ class GraphBasedSolver:
                 var_node_local = leaves[0]; con_sub_idx = list(sub_graph.neighbors(var_node_local))[0]; var_sub_idx = var_node_local - A_sub.shape[0]
                 elimination_plan.append((var_sub_idx, con_sub_idx)); sub_graph.remove_node(var_node_local); sub_graph.remove_node(con_sub_idx)
 
-        # 3. Solve the core system
-        core_cons_sub_idx = sorted([n for n, attr in sub_graph.nodes(data=True) if attr['bipartite'] == 0])
-        core_vars_sub_idx = sorted([n - A_sub.shape[0] for n, attr in sub_graph.nodes(data=True) if attr['bipartite'] == 1])
-        info.update({'peeled_vars': len(variable_indices) - len(core_vars_sub_idx), 'core_constraints': len(core_cons_sub_idx), 'core_variables': len(core_vars_sub_idx)})
+        # 2b. --- NEW: MINIMUM DEGREE HEURISTIC ---
+        # Continue substituting using non-leaf pivots, as long as no fill-in occurs.
+        while True:
+            var_nodes = [n for n, attr in sub_graph.nodes(data=True) if attr['bipartite'] == 1]
+            if not var_nodes: break
+            
+            # Find the variable node with the minimum degree > 1
+            degrees = {n: d for n, d in sub_graph.degree(var_nodes) if d > 1}
+            if not degrees: break
+            
+            pivot_var_node = min(degrees, key=degrees.get)
+            
+            # Check if using this variable as a pivot would cause fill-in.
+            # Fill-in occurs if the variable's neighboring constraints are not
+            # already connected to the same set of other variables.
+            cons_neighbors = list(sub_graph.neighbors(pivot_var_node))
+            pivot_cons_node = cons_neighbors[0]
+            other_cons_nodes = cons_neighbors[1:]
+            
+            # Variables involved in the pivot equation (excluding the pivot variable itself)
+            pivot_row_vars = [n for n in sub_graph.neighbors(pivot_cons_node) if n != pivot_var_node]
+            
+            # Check for fill-in: An edge increases if any of the other constraints
+            # needs to be newly connected to a variable from the pivot row.
+            fill_in_detected = False
+            for c_other in other_cons_nodes:
+                for v_new in pivot_row_vars:
+                    if not sub_graph.has_edge(c_other, v_new):
+                        fill_in_detected = True; break
+                if fill_in_detected: break
+            
+            if fill_in_detected:
+                break # Stop this heuristic if it would increase edge count
+            
+            # --- Perform Gaussian Elimination (zero fill-in case) ---
+            pivot_var_idx = pivot_var_node - A_sub.shape[0]
+            pivot_cons_idx = pivot_cons_node
+            pivot_coeff = A_sub[pivot_cons_idx, pivot_var_idx]
+            if np.isclose(pivot_coeff, 0): break # Bad pivot, stop
 
+            for c_other_node in other_cons_nodes:
+                c_other_idx = c_other_node
+                scale = A_sub[c_other_idx, pivot_var_idx] / pivot_coeff
+                A_sub[c_other_idx, :] -= scale * A_sub[pivot_cons_idx, :]
+                b_sub[c_other_idx] -= scale * b_sub[c_other_idx]
+            
+            elimination_plan.append((pivot_var_idx, pivot_cons_idx))
+            sub_graph.remove_node(pivot_var_node)
+            sub_graph.remove_node(pivot_cons_node)
+
+        # 3. & 4. & 5. Solve remaining core and back-substitute (same as before)
+        # ... (Rest of the function is identical to the previous version)
+        core_cons_sub_idx = sorted([n for n, attr in sub_graph.nodes(data=True) if attr['bipartite'] == 0]); core_vars_sub_idx = sorted([n - A_sub.shape[0] for n, attr in sub_graph.nodes(data=True) if attr['bipartite'] == 1]); info.update({'peeled_vars': len(variable_indices) - len(core_vars_sub_idx), 'core_constraints': len(core_cons_sub_idx), 'core_variables': len(core_vars_sub_idx)})
         core_solved = False
         if core_cons_sub_idx and core_vars_sub_idx:
-            A_core = A_sub[core_cons_sub_idx, :][:, core_vars_sub_idx].toarray()
-            b_core = b_sub[core_cons_sub_idx]
-            n_core = A_core.shape[1]
-            
-            # Use lstsq for all cases; check residual for inconsistency
-            core_sol, residuals, rank, s = np.linalg.lstsq(A_core, b_core, rcond=None)
-            is_consistent = not (residuals.size > 0 and residuals[0] > 1e-8)
-
+            A_core = A_sub[core_cons_sub_idx, :][:, core_vars_sub_idx].toarray(); b_core = b_sub[core_cons_sub_idx]; n_core = A_core.shape[1]
+            core_sol, residuals, rank, s = np.linalg.lstsq(A_core, b_core, rcond=None); is_consistent = not (residuals.size > 0 and residuals[0] > 1e-8)
             if not is_consistent:
-                # SYSTEM IS INCONSISTENT -> Call L1_find
-                info.update({'status': 'failed_inconsistent', 'classification': 'inconsistent_core'})
-                conflicting_core_indices = self.L1_find(A_core, b_core)
-                if conflicting_core_indices is not None:
-                    # Map local core indices back to original A matrix indices
-                    conflicting_sub_indices = [core_cons_sub_idx[i] for i in conflicting_core_indices]
-                    conflicting_orig_indices = [constraint_indices[i] for i in conflicting_sub_indices]
-                    info['conflicting_constraints'] = conflicting_orig_indices
-            
+                info.update({'status': 'failed_inconsistent', 'classification': 'inconsistent_core'}); conflicting_core_indices = self.L1_find(A_core, b_core)
+                if conflicting_core_indices is not None: info['conflicting_constraints'] = [constraint_indices[core_cons_sub_idx[i]] for i in conflicting_core_indices]
             elif rank < n_core:
-                # Consistent but underconstrained
-                info.update({'status': 'solved_partially', 'classification': 'underconstrained_core'})
-                null_space = scipy.linalg.null_space(A_core)
-                is_unique = np.all(np.isclose(null_space, 0), axis=1)
-                final_core_sol = np.full(n_core, np.nan)
-                for i in range(n_core):
+                info.update({'status': 'solved_partially', 'classification': 'underconstrained_core'}); null_space = scipy.linalg.null_space(A_core); is_unique = np.all(np.isclose(null_space, 0), axis=1)
+                final_core_sol = np.full(n_core, np.nan); 
+                for i in range(n_core): 
                     if is_unique[i]: final_core_sol[i] = core_sol[i]
-                core_sol = final_core_sol
-                core_solved = True
-            
-            else:
-                # Consistent and determined
-                info.update({'status': 'solved', 'classification': 'determined_core'})
-                core_solved = True
-            
-            if core_solved:
-                for i, var_idx in enumerate(core_vars_sub_idx):
-                    sub_solution[var_idx] = core_sol[i]
-
-        elif not core_cons_sub_idx and not core_vars_sub_idx:
-            info['status'] = 'solved'
-            core_solved = True
-
-        # 4. & 5. Back-substitution and Update (same as before)
+                core_sol = final_core_sol; core_solved = True
+            else: info.update({'status': 'solved', 'classification': 'determined_core'}); core_solved = True
+            if core_solved: 
+                for i, var_idx in enumerate(core_vars_sub_idx): sub_solution[var_idx] = core_sol[i]
+        elif not core_cons_sub_idx and not core_vars_sub_idx: info['status'] = 'solved'; core_solved = True
         if core_solved:
             for var_sub_idx, con_sub_idx in reversed(elimination_plan):
                 row_vals = A_sub[con_sub_idx, :].toarray().flatten(); coeff = row_vals[var_sub_idx]
                 other_terms = np.nansum([val * sub_solution[j] for j, val in enumerate(row_vals) if j != var_sub_idx])
                 if coeff != 0: sub_solution[var_sub_idx] = (b_sub[con_sub_idx] - other_terms) / coeff
         if np.any(~np.isnan(sub_solution)):
-             for sub_idx, val in enumerate(sub_solution):
-                self.solution[sub_to_orig_var[sub_idx]] = val
-        
+             for sub_idx, val in enumerate(sub_solution): self.solution[sub_to_orig_var[sub_idx]] = val
         return info
 
-# --- Demonstration ---
 if __name__ == '__main__':
     # Example 4: An inconsistent system
     # x0       = 10  (constraint 0)
@@ -206,16 +204,17 @@ if __name__ == '__main__':
 
     #circular constraints
     A = []
-    a_row = [0]*1000
+    size = 200
+    a_row = [0]*size
     a_row[0], a_row[1], a_row[2] = 1, -2, 1
-    for i in range(998):
+    for i in range(size - 2):
         A.append(np.array(a_row))
         a_row = [0] + a_row[:-1]
     
     import random
     #random.shuffle(A)
     
-    b = [0] * 999 + [100]
+    b = [0] * (size - 1) + [100]
     b = np.array(b)
     A = np.array(A)
 
