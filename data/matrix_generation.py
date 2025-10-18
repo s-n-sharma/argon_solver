@@ -4,7 +4,7 @@ import scipy as sp
 class ConstraintGeneration:
     """efficiently create data
     """
-    def create_circular_network( num_constraints):
+    def create_circular_network( num_constraints, consistent = True):
         """This creates a circular factor graph where each variable is tied to 2 constraints in a closed loop
             num_variables = num_constraints
         """
@@ -18,7 +18,15 @@ class ConstraintGeneration:
         data = np.tile([1, -1], num_constraints)
         
         A = sp.sparse.csc_matrix((data, (rows, cols)), shape=(num_constraints, num_variables))
-        b = np.random.rand(num_constraints)
+        if consistent:
+            x_true = np.random.rand(num_variables)
+            b = A @ x_true
+        else:
+            x_true = np.random.rand(num_variables)
+            b_consistent = A @ x_true
+            y = np.ones(num_constraints)
+            b = b_consistent + y 
+
         return A, b
     
     def create_tree_network(num_constraints):
@@ -32,20 +40,40 @@ class ConstraintGeneration:
         b = np.random.rand(num_constraints)
         return A, b
         
-    def create_two_var_constraints(self, num_constraints, num_variables):
+    def create_two_var_constraints(self, num_constraints, num_variables, consistent=True):
         """This creates a constraint network where each equation is in form [00...1...-1...]x = [b] (only 2 nonzero entries per row)"""
         rows_idx = []
         cols_idx = []
         data = []
-        
-        for i in range(num_constraints):
-            j1, j2 = np.random.choice(num_variables, 2, replace=False)
-            rows_idx.extend([i, i])
-            cols_idx.extend([j1, j2])
-            data.extend([1, -1])
+        if consistent:
+            for i in range(num_constraints):
+                j1, j2 = np.random.choice(num_variables, 2, replace=False)
+                rows_idx.extend([i, i])
+                cols_idx.extend([j1, j2])
+                data.extend([1, -1])
+                
+            A = sp.sparse.csc_matrix((data, (rows_idx, cols_idx)), shape=(num_constraints, num_variables))
+            x_true = np.random.rand(num_variables)
+            b = A @ x_true
+            return A, b
+        else:
+            for i in range(num_constraints - 1):
+                j1, j2 = np.random.choice(num_variables, 2, replace=False)
+                rows_idx.extend([i, i])
+                cols_idx.extend([j1, j2])
+                data.extend([1, -1])
+                
+            A_temp = sp.sparse.csc_matrix((data, (rows_idx, cols_idx)), shape=(num_constraints, num_variables))
+            row_0 = A_temp.getrow(0)
+            rows_idx.extend([num_constraints - 1] * row_0.nnz)
+            cols_idx.extend(row_0.indices)
+            data.extend(row_0.data)
             
-        A = sp.sparse.csc_matrix((data, (rows_idx, cols_idx)), shape=(num_constraints, num_variables))
-        b = np.random.rand(num_constraints)
+            A = sp.sparse.csc_matrix((data, (rows_idx, cols_idx)), shape=(num_constraints, num_variables))
+
+            b = np.random.rand(num_constraints)
+            b[num_constraints - 1] = b[0] + 1.0 
+
         return A, b
     
     def create_midpoint_two_var(num_constraints, num_variables):
@@ -75,15 +103,35 @@ class ConstraintGeneration:
         A = sp.sparse.csc_matrix((data, (rows_idx, cols_idx)), shape=(num_constraints, num_variables))
         return A, b
         
-    def create_random_sparse_constraints(num_constraints, num_variables):
+    def create_random_sparse_constraints(num_constraints, num_variables, consistent=True):
         """create random constraints sparse graphs that are sparse"""
         avg_degree = 4
         density = min(avg_degree / num_variables, 1.0)
         
-        A = sp.sparse.random(num_constraints, num_variables, 
-                              density=density, 
-                              format='csc',
-                              data_rvs=np.random.randn)
+        data_rvs = np.random.randn # Use a function, not the result
         
-        b = np.random.rand(num_constraints)
+        if consistent:
+            A = sp.sparse.random(num_constraints, num_variables, 
+                                density=density, 
+                                format='csc',
+                                data_rvs=data_rvs)
+            
+            x_true = np.random.rand(num_variables)
+            b = A @ x_true
+        else:
+
+            if num_constraints < 2:
+                raise ValueError("Cannot guarantee inconsistency with < 2 constraints")
+            A_m_minus_1 = sp.sparse.random(num_constraints - 1, num_variables, 
+                                            density=density, 
+                                            format='csc',
+                                            data_rvs=data_rvs)
+
+            A_last_row = A_m_minus_1.getrow(0)
+
+            A = sp.sparse.vstack([A_m_minus_1, A_last_row], format='csc')
+
+            b = np.random.rand(num_constraints)
+            b[num_constraints - 1] = b[0] + 1.0
+
         return A, b

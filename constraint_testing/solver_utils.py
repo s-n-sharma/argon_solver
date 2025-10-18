@@ -1,5 +1,8 @@
 import numpy as np
-import scipy.sparse as sp
+
+import scipy.sparse.linalg as spla
+import scipy as sp
+import scipy.sparse as spa 
 import sparseqr
 from numpy.linalg import norm
 from scipy.linalg import solve_triangular
@@ -14,8 +17,8 @@ class Solver:
         """creates A' for A'x = 0"""
         
         b_col = -b.reshape(-1, 1)
-        b_sparse = sp.csc_matrix(b_col)
-        A_prime = sp.hstack([A, b_sparse], format='csc')
+        b_sparse = spa.csc_matrix(b_col)
+        A_prime = spa.hstack([A, b_sparse], format='csc')
         
         return A_prime
     def graph_laplacian(A_prime):
@@ -25,12 +28,12 @@ class Solver:
         S = S.tocsc()
 
         row_degrees = S.sum(axis=1).A1  
-        Dc = sp.diags(row_degrees, format='csc')
+        Dc = spa.diags(row_degrees, format='csc')
 
         col_degrees = S.sum(axis=0).A1
-        Dv = sp.diags(col_degrees, format='csc')
+        Dv = spa.diags(col_degrees, format='csc')
 
-        L = sp.bmat([
+        L = spa.bmat([
             [Dc, -S],
             [-S.transpose(), Dv]
         ], format='csc')
@@ -43,7 +46,7 @@ class Solver:
         Analyzes the system Ax=b using sparseqr.qr function.
         """
         m, n = A.shape
-        if not sp.isspmatrix_coo(A):
+        if not spa.isspmatrix_coo(A):
             A = A.tocoo()
 
         try:
@@ -71,7 +74,7 @@ class Solver:
         R11 = R.tocsc()[:rank, :rank] 
 
     
-        if sp.issparse(R11):
+        if spa.issparse(R11):
             R11 = R11.toarray() 
             
         y1 = solve_triangular(R11, c1, lower=False)
@@ -87,7 +90,7 @@ class Solver:
     def is_conflicting_using_QR(A,b):
         """wrapper to do test conflicting constraints"""
        
-        if not sp.isspmatrix_coo(A):
+        if not spa.isspmatrix_coo(A):
             A = A.tocoo()
         b = b.reshape(-1, 1)
             
@@ -99,3 +102,38 @@ class Solver:
         except Exception as e:
             print(f"QR solver failed: {e}")
             return
+        
+    def is_consistent(A_sub, b_sub):
+        """
+            feasibility 
+        """
+        if A_sub.shape[0] == 0:
+            return True 
+
+        c = np.zeros(A_sub.shape[1])
+        res = sp.optimize.linprog(
+            c=c,
+            A_eq=A_sub,
+            b_eq=b_sub,
+            bounds=(None, None),
+            method='highs', 
+            options={'presolve': False} 
+        )
+
+        return res.status != 2
+    
+    def verify_iis(A, b, iis_indices):
+        """verify the indices provided are good"""
+        A_iis = A[iis_indices, :]
+        b_iis = b[iis_indices]
+        
+        if Solver.is_consistent(A_iis, b_iis):
+            return False
+        for i in iis_indices:
+            subset_indices = [j for j in iis_indices if j != i]
+            A_sub = A[subset_indices, :]
+            b_sub = b[subset_indices]
+
+            if not Solver.is_consistent(A_sub, b_sub):
+                return False
+        return True
