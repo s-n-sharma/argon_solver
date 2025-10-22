@@ -81,9 +81,10 @@ class Solver:
 
         x_hat = np.zeros(n)
         x_hat[E[:rank]] = y1
-        residual = b - A @ x_hat
+        residual = np.asarray(b - A @ x_hat).reshape(-1)
 
         sorted_indices = np.argsort(np.abs(residual))[::-1]
+        sorted_indices = np.asarray(sorted_indices, dtype=int).reshape(-1)
         
         return sorted_indices, residual
 
