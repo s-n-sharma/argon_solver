@@ -41,13 +41,13 @@ class Solver:
         return L
 
 
-    def analyze_system_with_qr(A, b):
+    def analyze_system_with_qr(A, b, verbose = False):
         """
         Analyzes the system Ax=b using sparseqr.qr function.
         """
         m, n = A.shape
         if not spa.isspmatrix_coo(A):
-            A = A.tocoo()
+            A = spa.coo_matrix(A)
 
         try:
             Q, R, E, rank = sparseqr.qr(
@@ -56,6 +56,11 @@ class Solver:
         except Exception as e:
             print(f"QR solver failed: {e}")
             return
+        if (verbose):         
+            print("------------------")
+            print("R diagonal")
+            print(R.toarray())
+            print("------------------")
         b_col = b.reshape(-1, 1)
         c_vec = Q.transpose() @ b_col
         c_bottom = c_vec[rank:]
@@ -68,6 +73,11 @@ class Solver:
         
 
         c = Q.T @ b
+        if verbose:
+            print("c matrix")
+            print(f"{c}")
+            print("------------------")
+        
         
         # get solvable parts 
         c1 = c[:rank]
@@ -78,31 +88,45 @@ class Solver:
             R11 = R11.toarray() 
             
         y1 = solve_triangular(R11, c1, lower=False)
+        if verbose:
+            print(y1)
 
         x_hat = np.zeros(n)
         x_hat[E[:rank]] = y1
         residual = np.asarray(b - A @ x_hat).reshape(-1)
-
+        if verbose:
+            print(residual)
         sorted_indices = np.argsort(np.abs(residual))[::-1]
         sorted_indices = np.asarray(sorted_indices, dtype=int).reshape(-1)
         
         return sorted_indices, residual
 
     def is_conflicting_using_QR(A,b):
-        """wrapper to do test conflicting constraints"""
-       
+        """
+        Analyzes the system Ax=b using sparseqr.qr function.
+        """
+        m, n = A.shape
         if not spa.isspmatrix_coo(A):
-            A = A.tocoo()
-        b = b.reshape(-1, 1)
-            
+            A = spa.coo_matrix(A)
+
         try:
-            _= sparseqr.solve(
-                A, b
+            Q, R, E, rank = sparseqr.qr(
+                A, economy=False, tolerance=1e-10
             )
-            return _
         except Exception as e:
             print(f"QR solver failed: {e}")
             return
+
+        b_col = b.reshape(-1, 1)
+        c_vec = Q.transpose() @ b_col
+        c_bottom = c_vec[rank:]
+        
+        conflict_norm = norm(c_bottom)
+
+
+        is_unconstrained = rank < n
+        is_conflicting = conflict_norm > 1e-9 
+        return is_conflicting
         
     def is_consistent(A_sub, b_sub):
         """

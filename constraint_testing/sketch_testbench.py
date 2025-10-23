@@ -1,24 +1,39 @@
-"""Benchmark conflict detection for CAD-style constraint systems."""
+"""Benchmark conflict detection for CAD-style linear constraint systems."""
+
+from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable, Optional, Set, Tuple
 
 import numpy as np
 import scipy.sparse as spa
 from numpy.linalg import norm
 
+_HERE = Path(__file__).resolve()
+_CONSTRAINT_ROOT = _HERE.parent
+_REPO_ROOT = _CONSTRAINT_ROOT.parent
+
+import sys
+
+for _path in (_CONSTRAINT_ROOT, _REPO_ROOT):
+    path_str = str(_path)
+    if path_str not in sys.path:
+        sys.path.insert(0, path_str)
+
 try:  # Allow running as both a module and a script.
     from .solver_utils import Solver
-    from .sketch import SketchConfig, analyze_system_with_sketch
-    from .sketch.fossils import (
-        FossilsConfig,
-        analyze_system_with_fossils,
+    from .sketch import (
+        AnalysisConfig,
+        SketchSolverOptions,
+        analyze_linear_system,
     )
+    from ..data import ConstraintGeneration
 except ImportError:  # pragma: no cover - fallback for direct execution.
     from solver_utils import Solver
-    from sketch import SketchConfig, analyze_system_with_sketch
-    from sketch.fossils import FossilsConfig, analyze_system_with_fossils
+    from sketch import AnalysisConfig, SketchSolverOptions, analyze_linear_system
+    from data import ConstraintGeneration
 
 
 @dataclass
@@ -33,92 +48,108 @@ class ProblemSpec:
     sketch_size: Optional[int] = None
 
 
-def _random_problem_builder(
-    m: int,
-    n: int,
-    density: float,
-    noise: float,
-) -> Callable[[np.random.Generator], Tuple[spa.csc_matrix, np.ndarray, np.ndarray]]:
-    def builder(rng: np.random.Generator) -> Tuple[spa.csc_matrix, np.ndarray, np.ndarray]:
-        data_rvs = rng.standard_normal
-        A = spa.random(m, n, density=density, format="csr", data_rvs=data_rvs)
-        x_star = rng.standard_normal(n)
-        b = np.asarray(A @ x_star, dtype=float)
-        conflict_idx = rng.integers(m)
-        b[conflict_idx] += noise
-        truth = np.array([int(conflict_idx)], dtype=int)
-        return A.tocsc(), b, truth
+def _circular_builder(
+    num_constraints: int,
+    num_iis: int,
+    delta: float,
+) -> Callable[[np.random.Generator], Tuple[spa.csc_matrix, np.ndarray, Optional[np.ndarray]]]:
+    def builder(rng: np.random.Generator) -> Tuple[spa.csc_matrix, np.ndarray, Optional[np.ndarray]]:
+        if num_iis <= 0:
+            A, b, inconsistent = ConstraintGeneration.create_circular_network(
+                num_constraints=num_constraints,
+                consistent=True,
+                random_state=rng,
+            )
+        else:
+            A, b, inconsistent = ConstraintGeneration.create_circular_network(
+                num_constraints=num_constraints,
+                consistent=False,
+                num_iis=num_iis,
+                delta=delta,
+                random_state=rng,
+            )
+        truth = np.array(inconsistent, dtype=int) if inconsistent else None
+        return A, np.asarray(b, dtype=float), truth
 
     return builder
 
 
-def _length_cycle_builder(
+def _two_var_builder(
     num_constraints: int,
+    num_variables: int,
+    num_iis: int,
     delta: float,
-) -> Callable[[np.random.Generator], Tuple[spa.csc_matrix, np.ndarray, np.ndarray]]:
-    def builder(rng: np.random.Generator) -> Tuple[spa.csc_matrix, np.ndarray, np.ndarray]:
-        if num_constraints < 2:
-            raise ValueError("num_constraints must be at least 2")
-        base_m = num_constraints - 1
-        num_points = base_m
-        row_idx = np.repeat(np.arange(base_m), 2)
-        col_idx = np.empty(2 * base_m, dtype=int)
-        indices = np.arange(base_m)
-        col_idx[0::2] = indices
-        col_idx[1::2] = (indices + 1) % num_points
-        data = np.empty(2 * base_m, dtype=float)
-        data[0::2] = -1.0
-        data[1::2] = 1.0
-        A_base = spa.csr_matrix((data, (row_idx, col_idx)), shape=(base_m, num_points)).tocsc()
-        positions = rng.uniform(-1.0, 1.0, size=num_points)
-        b = np.asarray(
-            positions[(indices + 1) % num_points] - positions[indices],
-            dtype=float,
-        )
-        conflict_idx = rng.integers(base_m)
-        conflict_row = A_base.getrow(conflict_idx)
-        A = spa.vstack([A_base, conflict_row], format="csc").tocsc()
-        b_conflict = b.copy()
-        b_aug = np.concatenate([b_conflict, [b_conflict[conflict_idx] + delta]])
-        truth = np.array([int(conflict_idx), int(base_m)], dtype=int)
-        return A, b_aug, truth
+) -> Callable[[np.random.Generator], Tuple[spa.csc_matrix, np.ndarray, Optional[np.ndarray]]]:
+    def builder(rng: np.random.Generator) -> Tuple[spa.csc_matrix, np.ndarray, Optional[np.ndarray]]:
+        consistent = num_iis <= 0
+        if consistent:
+            A, b, inconsistent = ConstraintGeneration.create_two_var_constraints(
+                num_constraints=num_constraints,
+                num_variables=num_variables,
+                consistent=True,
+                random_state=rng,
+            )
+        else:
+            A, b, inconsistent = ConstraintGeneration.create_two_var_constraints(
+                num_constraints=num_constraints,
+                num_variables=num_variables,
+                consistent=False,
+                num_iis=num_iis,
+                delta=delta,
+                random_state=rng,
+            )
+        truth = np.array(inconsistent, dtype=int) if inconsistent else None
+        return A, np.asarray(b, dtype=float), truth
 
     return builder
 
 
-def _midpoint_cycle_builder(
+def _midpoint_builder(
     num_constraints: int,
+    num_variables: int,
+    num_iis: int,
     delta: float,
-) -> Callable[[np.random.Generator], Tuple[spa.csc_matrix, np.ndarray, np.ndarray]]:
-    def builder(rng: np.random.Generator) -> Tuple[spa.csc_matrix, np.ndarray, np.ndarray]:
-        if num_constraints < 3:
-            raise ValueError("num_constraints must be at least 3")
-        base_m = num_constraints - 1
-        num_points = base_m
-        row_idx = np.repeat(np.arange(base_m), 3)
-        col_idx = np.empty(3 * base_m, dtype=int)
-        indices = np.arange(base_m)
-        col_idx[0::3] = indices
-        col_idx[1::3] = (indices + 1) % num_points
-        col_idx[2::3] = (indices + 2) % num_points
-        data = np.empty(3 * base_m, dtype=float)
-        data[0::3] = 1.0
-        data[1::3] = -2.0
-        data[2::3] = 1.0
-        A_base = spa.csr_matrix((data, (row_idx, col_idx)), shape=(base_m, num_points)).tocsc()
-        positions = rng.uniform(-1.0, 1.0, size=num_points)
-        b = np.asarray(
-            positions[indices]
-            - 2.0 * positions[(indices + 1) % num_points]
-            + positions[(indices + 2) % num_points],
-            dtype=float,
+) -> Callable[[np.random.Generator], Tuple[spa.csc_matrix, np.ndarray, Optional[np.ndarray]]]:
+    def builder(rng: np.random.Generator) -> Tuple[spa.csc_matrix, np.ndarray, Optional[np.ndarray]]:
+        A, b, inconsistent = ConstraintGeneration.create_midpoint_two_var(
+            num_constraints=num_constraints,
+            num_variables=num_variables,
+            num_iis=num_iis,
+            delta=delta,
+            random_state=rng,
         )
-        conflict_idx = rng.integers(base_m)
-        conflict_row = A_base.getrow(conflict_idx)
-        A = spa.vstack([A_base, conflict_row], format="csc").tocsc()
-        b_aug = np.concatenate([b, [b[conflict_idx] + delta]])
-        truth = np.array([int(conflict_idx), int(base_m)], dtype=int)
-        return A, b_aug, truth
+        truth = np.array(inconsistent, dtype=int) if inconsistent else None
+        return A, np.asarray(b, dtype=float), truth
+
+    return builder
+
+
+def _random_sparse_builder(
+    num_constraints: int,
+    num_variables: int,
+    num_iis: int,
+    delta: float,
+) -> Callable[[np.random.Generator], Tuple[spa.csc_matrix, np.ndarray, Optional[np.ndarray]]]:
+    def builder(rng: np.random.Generator) -> Tuple[spa.csc_matrix, np.ndarray, Optional[np.ndarray]]:
+        consistent = num_iis <= 0
+        if consistent:
+            A, b, inconsistent = ConstraintGeneration.create_random_sparse_constraints(
+                num_constraints=num_constraints,
+                num_variables=num_variables,
+                consistent=True,
+                random_state=rng,
+            )
+        else:
+            A, b, inconsistent = ConstraintGeneration.create_random_sparse_constraints(
+                num_constraints=num_constraints,
+                num_variables=num_variables,
+                consistent=False,
+                num_iis=num_iis,
+                delta=delta,
+                random_state=rng,
+            )
+        truth = np.array(inconsistent, dtype=int) if inconsistent else None
+        return A, np.asarray(b, dtype=float), truth
 
     return builder
 
@@ -129,9 +160,8 @@ def _truth_reference(
     top_k: int,
 ) -> Tuple[Set[int], int, bool]:
     qr_slice = np.asarray(qr_indices[:top_k], dtype=int)
-
     if truth is None:
-        truth_slice = qr_slice
+        truth_slice = np.asarray([], dtype=int)
     else:
         truth_slice = np.asarray(truth, dtype=int).ravel()
 
@@ -154,10 +184,15 @@ def _hit_status(truth_set: Set[int], indices: np.ndarray, top_k: int) -> bool:
     return not candidate_set
 
 
+def _total_time(log) -> float:
+    return float(log.time_sketch + log.time_factor + log.time_iterate)
+
+
 def run_case(
     spec: ProblemSpec,
-    base_sketch_config: SketchConfig,
-    base_fossils_config: FossilsConfig,
+    base_sketch_options: SketchSolverOptions,
+    base_fossils_options: SketchSolverOptions,
+    base_analysis: AnalysisConfig,
 ) -> dict:
     rng = np.random.default_rng(spec.seed)
     A, b, truth = spec.builder(rng)
@@ -172,38 +207,51 @@ def run_case(
 
     truth_set, truth_count, qr_hit = _truth_reference(truth, qr_indices, spec.top_k)
 
-    sketch_config = SketchConfig(
-        sketch_size=spec.sketch_size or base_sketch_config.sketch_size,
-        random_state=base_sketch_config.random_state,
-        sketch_method=base_sketch_config.sketch_method,
-        sparsity_parameter=base_sketch_config.sparsity_parameter,
-        rank_tol=base_sketch_config.rank_tol,
-        residual_tol=base_sketch_config.residual_tol,
-        top_k_conflicts=max(spec.top_k, base_sketch_config.top_k_conflicts or spec.top_k),
+    conflict_budget = max(spec.top_k, truth_count)
+
+    sketch_options = SketchSolverOptions(
+        mode=base_sketch_options.mode,
+        sketch_method=base_sketch_options.sketch_method,
+        sampling_factor=base_sketch_options.sampling_factor,
+        sketch_size=spec.sketch_size or base_sketch_options.sketch_size,
+        sparsity=base_sketch_options.sparsity,
+        regularization=base_sketch_options.regularization,
+        rank_tol=base_sketch_options.rank_tol,
+        lsqr_tol=base_sketch_options.lsqr_tol,
+        lsqr_iter_lim=base_sketch_options.lsqr_iter_lim,
+        random_state=base_sketch_options.random_state,
+        warm_start=base_sketch_options.warm_start,
+    )
+    sketch_analysis = AnalysisConfig(
+        residual_tol_rel=base_analysis.residual_tol_rel,
+        residual_tol_abs=base_analysis.residual_tol_abs,
+        top_k_conflicts=conflict_budget,
     )
 
-    sketch_result = analyze_system_with_sketch(A, b, sketch_config)
-    sketch_hit = _hit_status(truth_set, sketch_result.sorted_indices, spec.top_k)
+    sketch_result = analyze_linear_system(A, b, sketch_options, sketch_analysis)
+    sketch_hit = _hit_status(truth_set, sketch_result.conflicting_indices, spec.top_k)
 
-    fossils_config = FossilsConfig(
-        sketch_size=spec.sketch_size or base_fossils_config.sketch_size,
-        embedding_oversample=base_fossils_config.embedding_oversample,
-        random_state=base_fossils_config.random_state,
-        sketch_method=base_fossils_config.sketch_method,
-        sparsity_parameter=base_fossils_config.sparsity_parameter,
-        rank_tol=base_fossils_config.rank_tol,
-        residual_tol=base_fossils_config.residual_tol,
-        lsqr_atol=base_fossils_config.lsqr_atol,
-        lsqr_btol=base_fossils_config.lsqr_btol,
-        lsqr_iter_lim=base_fossils_config.lsqr_iter_lim,
-        heavy_ball_iters=base_fossils_config.heavy_ball_iters,
-        heavy_ball_alpha=base_fossils_config.heavy_ball_alpha,
-        heavy_ball_beta=base_fossils_config.heavy_ball_beta,
-        top_k_conflicts=max(spec.top_k, base_fossils_config.top_k_conflicts or spec.top_k),
+    fossils_options = SketchSolverOptions(
+        mode=base_fossils_options.mode,
+        sketch_method=base_fossils_options.sketch_method,
+        sampling_factor=base_fossils_options.sampling_factor,
+        sketch_size=spec.sketch_size or base_fossils_options.sketch_size,
+        sparsity=base_fossils_options.sparsity,
+        regularization=base_fossils_options.regularization,
+        rank_tol=base_fossils_options.rank_tol,
+        lsqr_tol=base_fossils_options.lsqr_tol,
+        lsqr_iter_lim=base_fossils_options.lsqr_iter_lim,
+        random_state=base_fossils_options.random_state,
+        warm_start=base_fossils_options.warm_start,
+    )
+    fossils_analysis = AnalysisConfig(
+        residual_tol_rel=base_analysis.residual_tol_rel,
+        residual_tol_abs=base_analysis.residual_tol_abs,
+        top_k_conflicts=conflict_budget,
     )
 
-    fossils_result = analyze_system_with_fossils(A, b, fossils_config)
-    fossils_hit = _hit_status(truth_set, fossils_result.sorted_indices, spec.top_k)
+    fossils_result = analyze_linear_system(A, b, fossils_options, fossils_analysis)
+    fossils_hit = _hit_status(truth_set, fossils_result.conflicting_indices, spec.top_k)
 
     return {
         "spec": spec,
@@ -213,8 +261,8 @@ def run_case(
         "sketch_hit": sketch_hit,
         "fossils_hit": fossils_hit,
         "qr_time": qr_time,
-        "sketch_time": sketch_result.solve_time,
-        "fossils_time": fossils_result.solve_time,
+        "sketch_time": _total_time(sketch_result.solver_log),
+        "fossils_time": _total_time(fossils_result.solver_log),
         "qr_residual_norm": qr_norm,
         "sketch_residual_norm": sketch_result.residual_norm,
         "fossils_residual_norm": fossils_result.residual_norm,
@@ -228,46 +276,76 @@ def _format_ms(seconds: float) -> str:
 def run_benchmark() -> None:
     specs = [
         ProblemSpec(
-            name="random_over_2000x800",
-            builder=_random_problem_builder(m=2000, n=800, density=0.01, noise=1e-3),
-            top_k=5,
+            name="loop_consistent_4000",
+            builder=_circular_builder(num_constraints=4000, num_iis=0, delta=1e-3),
+            top_k=0,
             seed=0,
         ),
         ProblemSpec(
-            name="random_over_8000x2000",
-            builder=_random_problem_builder(m=8000, n=2000, density=0.005, noise=1e-3),
-            top_k=5,
+            name="loop_multi_iis_4800",
+            builder=_circular_builder(num_constraints=4800, num_iis=3, delta=1e-3),
+            top_k=6,
             seed=1,
         ),
         ProblemSpec(
-            name="length_cycle_2000",
-            builder=_length_cycle_builder(num_constraints=2000, delta=1e-3),
-            top_k=4,
+            name="two_var_multi_iis_6000x1800",
+            builder=_two_var_builder(
+                num_constraints=6000,
+                num_variables=1800,
+                num_iis=4,
+                delta=5e-4,
+            ),
+            top_k=8,
             seed=2,
         ),
         ProblemSpec(
-            name="length_cycle_10000",
-            builder=_length_cycle_builder(num_constraints=10000, delta=1e-3),
-            top_k=4,
+            name="midpoint_mix_4500x1500",
+            builder=_midpoint_builder(
+                num_constraints=4500,
+                num_variables=1500,
+                num_iis=3,
+                delta=7.5e-4,
+            ),
+            top_k=8,
             seed=3,
         ),
         ProblemSpec(
-            name="midpoint_cycle_3000",
-            builder=_midpoint_cycle_builder(num_constraints=3000, delta=1e-3),
-            top_k=4,
+            name="random_sparse_multi_iis_8000x2400",
+            builder=_random_sparse_builder(
+                num_constraints=8000,
+                num_variables=2400,
+                num_iis=5,
+                delta=1e-3,
+            ),
+            top_k=10,
             seed=4,
-        ),
-        ProblemSpec(
-            name="midpoint_cycle_9000",
-            builder=_midpoint_cycle_builder(num_constraints=9000, delta=1e-3),
-            top_k=4,
-            seed=5,
         ),
     ]
 
-    max_top_k = max(spec.top_k for spec in specs)
-    base_sketch = SketchConfig(random_state=42, top_k_conflicts=max_top_k)
-    base_fossils = FossilsConfig(random_state=123, top_k_conflicts=max_top_k)
+    base_sketch = SketchSolverOptions(
+        mode="solve",
+        sketch_method="sparse_sign",
+        sampling_factor=2.5,
+        sparsity=6,
+        random_state=42,
+        regularization=0.0,
+        rank_tol=1e-10,
+    )
+    base_fossils = SketchSolverOptions(
+        mode="precondition",
+        sketch_method="sparse_sign",
+        sampling_factor=3.0,
+        sparsity=6,
+        lsqr_tol=1e-7,
+        lsqr_iter_lim=150,
+        random_state=123,
+        rank_tol=1e-10,
+    )
+    base_analysis = AnalysisConfig(
+        residual_tol_rel=1e-7,
+        residual_tol_abs=1e-8,
+        top_k_conflicts=10,
+    )
 
     header = (
         "Case".ljust(28)
@@ -277,7 +355,7 @@ def run_benchmark() -> None:
     print("-" * len(header))
 
     for spec in specs:
-        result = run_case(spec, base_sketch, base_fossils)
+        result = run_case(spec, base_sketch, base_fossils, base_analysis)
         qr_status = "OK" if result["qr_hit"] else "MISS"
         sketch_status = "OK" if result["sketch_hit"] else "MISS"
         fossils_status = "OK" if result["fossils_hit"] else "MISS"
@@ -288,7 +366,7 @@ def run_benchmark() -> None:
             f" | {_format_ms(result['fossils_time'])}"
         )
 
-    print("\nLegend: OK means the conflicting constraint appeared within the top_k candidates.")
+    print("\nLegend: OK means every ground-truth conflicting constraint appeared within the top_k candidates.")
 
 
 if __name__ == "__main__":  # pragma: no cover
