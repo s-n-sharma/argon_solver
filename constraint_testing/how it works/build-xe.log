@@ -1,0 +1,37 @@
+This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex)
+ restricted \write18 enabled.
+entering extended mode
+(./qr.tex
+LaTeX2e <2025-06-01> patch level 1
+L3 programming layer <2025-08-13>
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/base/size11.clo))
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/geometry/geometry.sty
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/graphics/keyval.sty)
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/generic/iftex/ifvtex.sty
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/generic/iftex/iftex.sty)))
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/fontspec/fontspec.sty
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/l3packages/xparse/xparse.
+sty (/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/l3kernel/expl3.sty
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/l3backend/l3backend-xetex
+.def)))
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/fontspec/fontspec-xetex.s
+ty (/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/base/fontenc.sty)
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/fontspec/fontspec.cfg)))
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/generic/babel/babel.sty
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/generic/babel/xebabel.def)
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/generic/babel/errbabel.def)
+
+! Package babel Error: The bidi method 'basic' is available only in
+(babel)                luatex. I'll continue with 'bidi=default', so
+(babel)                expect wrong results.
+
+See the babel package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.3937     \bbl@error{bidi-only-lua}{}{}{}
+                                          %
+No pages of output.
+Transcript written on qr.log.
