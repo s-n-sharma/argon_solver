@@ -26,14 +26,36 @@ def get_old_solver_bad_example():
 def get_circular_constraints_example(size=200):
     """Generates the 'circular constraints' example matrix and vector."""
     A = []
-    size = 200
     a_row = [0]*size
     a_row[0], a_row[1], a_row[2] = 1, -2, 1
     for i in range(size - 2):
         A.append(np.array(a_row))
         a_row = [0] + a_row[:-1]
 
-    b = [0] * (198 - 1) + [100]
+    A.append(np.array([1] + [0]*(size - 2) + [-1]))
+    A.append(np.array([1] + [0]*(size - 1)))
+    b = [0] * (size - 2) + [size] + [0]
     b = np.array(b)
     A = np.array(A)
     return A, b
+
+def get_circular_constraints_dense(size = 200):
+    """
+    x0 - x1 = x1 - x2 = x2 - x3
+    y0 - y1 = y1 - y2 = y2 - y3
+    """
+    pass
+
+def get_large_sparse_inconsistent(size = 200, ninc = 5):
+    rng = np.random.default_rng(42)
+    A = sp.random(size, size, density=0.05).tocsr()
+    x = rng.random(size)
+    b = A @ x
+
+    # make inconsistencies
+    for i in range(ninc):
+        num_comp = np.random.randint(0, size // 20)
+        comp = np.random.randint(0, size, size=num_comp, dtype='l')
+        row = rng.integers(0, size)
+        b[row] += rng.uniform(1.0, 10.0)
+

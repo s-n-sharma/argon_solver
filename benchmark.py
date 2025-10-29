@@ -2,6 +2,7 @@ import time
 import numpy as np
 from better_collapsing import GraphBasedSolver
 from qr_solver import QRSolver
+from qr_find import QR_find
 from graph_qr_solver import GraphQRSolver
 import matrices
 
@@ -67,9 +68,11 @@ if __name__ == '__main__':
     }
 
     # Run the benchmark
-    print("\n" + "="*40)
-    run_benchmark(GraphBasedSolver, matrix_functions)
-    print("\n" + "="*40)
-    run_benchmark(QRSolver, matrix_functions)
+    #print("\n" + "="*40)
+    #run_benchmark(GraphBasedSolver, matrix_functions)
+    #print("\n" + "="*40)
+    #run_benchmark(QRSolver, matrix_functions)
     print("\n" + "="*40)
     run_benchmark(GraphQRSolver, matrix_functions)
+    print("\n" + "="*40)
+    run_benchmark(QR_find, matrix_functions)
