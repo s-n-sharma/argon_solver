@@ -1,0 +1,33 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./qr.tex
+LaTeX2e <2025-06-01> patch level 1
+L3 programming layer <2025-08-13>
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/base/size11.clo))
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/geometry/geometry.sty
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/graphics/keyval.sty)
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/generic/iftex/ifvtex.sty
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/generic/iftex/iftex.sty)))
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/fontspec/fontspec.sty
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/l3packages/xparse/xparse.
+sty (/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/l3kernel/expl3.sty
+(/home/nandan_diwan/texlive/2025/texmf-dist/tex/latex/l3backend/l3backend-pdfte
+x.def)))
+
+! Fatal Package fontspec Error: The fontspec package requires either XeTeX or
+(fontspec)                      LuaTeX.
+(fontspec)                      
+(fontspec)                      You must change your typesetting engine to,
+(fontspec)                      e.g., "xelatex" or "lualatex" instead of
+(fontspec)                      "latex" or "pdflatex".
+
+Type <return> to continue.
+ ...                                              
+                                                  
+l.101 \msg_fatal:nn {fontspec} {cannot-use-pdftex}
+                                                  
+!  ==> Fatal error occurred, no output PDF file produced!
+Transcript written on qr.log.

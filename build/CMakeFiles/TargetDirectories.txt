@@ -1,0 +1,3 @@
+/home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles/my_solver.dir
+/home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles/edit_cache.dir
+/home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles/rebuild_cache.dir
