@@ -1,3 +1,6 @@
 /home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles/my_solver.dir
+/home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles/qr_conflict_benchmark.dir
+/home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles/qr_givens_benchmark.dir
+/home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles/dynamic_qr_benchmark.dir
 /home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles/edit_cache.dir
 /home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles/rebuild_cache.dir

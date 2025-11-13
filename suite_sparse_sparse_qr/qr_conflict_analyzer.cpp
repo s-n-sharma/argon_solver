@@ -54,6 +54,10 @@ std::vector<double> backSubstituteUpper(
 
 } // namespace
 
+void add_constraint_to_matrix(cholmod_sparse* A, cholmod_sparse* new_constraint) {
+
+}
+
 QRConflictAnalysisResult analyze_system_with_qr(
     cholmod_sparse* A,
     cholmod_dense* b,

@@ -94,4 +94,7 @@ set(CMAKE_MAKEFILE_PRODUCTS
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/my_solver.dir/DependInfo.cmake"
+  "CMakeFiles/qr_conflict_benchmark.dir/DependInfo.cmake"
+  "CMakeFiles/qr_givens_benchmark.dir/DependInfo.cmake"
+  "CMakeFiles/dynamic_qr_benchmark.dir/DependInfo.cmake"
   )

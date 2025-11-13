@@ -129,6 +129,45 @@ my_solver/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/my_solver.dir/build.make CMakeFiles/my_solver.dir/build
 .PHONY : my_solver/fast
 
+#=============================================================================
+# Target rules for targets named qr_conflict_benchmark
+
+# Build rule for target.
+qr_conflict_benchmark: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 qr_conflict_benchmark
+.PHONY : qr_conflict_benchmark
+
+# fast build rule for target.
+qr_conflict_benchmark/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_conflict_benchmark.dir/build.make CMakeFiles/qr_conflict_benchmark.dir/build
+.PHONY : qr_conflict_benchmark/fast
+
+#=============================================================================
+# Target rules for targets named qr_givens_benchmark
+
+# Build rule for target.
+qr_givens_benchmark: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 qr_givens_benchmark
+.PHONY : qr_givens_benchmark
+
+# fast build rule for target.
+qr_givens_benchmark/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_givens_benchmark.dir/build.make CMakeFiles/qr_givens_benchmark.dir/build
+.PHONY : qr_givens_benchmark/fast
+
+#=============================================================================
+# Target rules for targets named dynamic_qr_benchmark
+
+# Build rule for target.
+dynamic_qr_benchmark: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 dynamic_qr_benchmark
+.PHONY : dynamic_qr_benchmark
+
+# fast build rule for target.
+dynamic_qr_benchmark/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dynamic_qr_benchmark.dir/build.make CMakeFiles/dynamic_qr_benchmark.dir/build
+.PHONY : dynamic_qr_benchmark/fast
+
 example.o: example.cpp.o
 .PHONY : example.o
 
@@ -153,12 +192,86 @@ example.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/my_solver.dir/build.make CMakeFiles/my_solver.dir/example.cpp.s
 .PHONY : example.cpp.s
 
+suite_sparse_sparse_qr/benchmark_conflict_detection.o: suite_sparse_sparse_qr/benchmark_conflict_detection.cpp.o
+.PHONY : suite_sparse_sparse_qr/benchmark_conflict_detection.o
+
+# target to build an object file
+suite_sparse_sparse_qr/benchmark_conflict_detection.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_conflict_benchmark.dir/build.make CMakeFiles/qr_conflict_benchmark.dir/suite_sparse_sparse_qr/benchmark_conflict_detection.cpp.o
+.PHONY : suite_sparse_sparse_qr/benchmark_conflict_detection.cpp.o
+
+suite_sparse_sparse_qr/benchmark_conflict_detection.i: suite_sparse_sparse_qr/benchmark_conflict_detection.cpp.i
+.PHONY : suite_sparse_sparse_qr/benchmark_conflict_detection.i
+
+# target to preprocess a source file
+suite_sparse_sparse_qr/benchmark_conflict_detection.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_conflict_benchmark.dir/build.make CMakeFiles/qr_conflict_benchmark.dir/suite_sparse_sparse_qr/benchmark_conflict_detection.cpp.i
+.PHONY : suite_sparse_sparse_qr/benchmark_conflict_detection.cpp.i
+
+suite_sparse_sparse_qr/benchmark_conflict_detection.s: suite_sparse_sparse_qr/benchmark_conflict_detection.cpp.s
+.PHONY : suite_sparse_sparse_qr/benchmark_conflict_detection.s
+
+# target to generate assembly for a file
+suite_sparse_sparse_qr/benchmark_conflict_detection.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_conflict_benchmark.dir/build.make CMakeFiles/qr_conflict_benchmark.dir/suite_sparse_sparse_qr/benchmark_conflict_detection.cpp.s
+.PHONY : suite_sparse_sparse_qr/benchmark_conflict_detection.cpp.s
+
+suite_sparse_sparse_qr/benchmark_givens_updates.o: suite_sparse_sparse_qr/benchmark_givens_updates.cpp.o
+.PHONY : suite_sparse_sparse_qr/benchmark_givens_updates.o
+
+# target to build an object file
+suite_sparse_sparse_qr/benchmark_givens_updates.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_givens_benchmark.dir/build.make CMakeFiles/qr_givens_benchmark.dir/suite_sparse_sparse_qr/benchmark_givens_updates.cpp.o
+.PHONY : suite_sparse_sparse_qr/benchmark_givens_updates.cpp.o
+
+suite_sparse_sparse_qr/benchmark_givens_updates.i: suite_sparse_sparse_qr/benchmark_givens_updates.cpp.i
+.PHONY : suite_sparse_sparse_qr/benchmark_givens_updates.i
+
+# target to preprocess a source file
+suite_sparse_sparse_qr/benchmark_givens_updates.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_givens_benchmark.dir/build.make CMakeFiles/qr_givens_benchmark.dir/suite_sparse_sparse_qr/benchmark_givens_updates.cpp.i
+.PHONY : suite_sparse_sparse_qr/benchmark_givens_updates.cpp.i
+
+suite_sparse_sparse_qr/benchmark_givens_updates.s: suite_sparse_sparse_qr/benchmark_givens_updates.cpp.s
+.PHONY : suite_sparse_sparse_qr/benchmark_givens_updates.s
+
+# target to generate assembly for a file
+suite_sparse_sparse_qr/benchmark_givens_updates.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_givens_benchmark.dir/build.make CMakeFiles/qr_givens_benchmark.dir/suite_sparse_sparse_qr/benchmark_givens_updates.cpp.s
+.PHONY : suite_sparse_sparse_qr/benchmark_givens_updates.cpp.s
+
+suite_sparse_sparse_qr/main.o: suite_sparse_sparse_qr/main.cpp.o
+.PHONY : suite_sparse_sparse_qr/main.o
+
+# target to build an object file
+suite_sparse_sparse_qr/main.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dynamic_qr_benchmark.dir/build.make CMakeFiles/dynamic_qr_benchmark.dir/suite_sparse_sparse_qr/main.cpp.o
+.PHONY : suite_sparse_sparse_qr/main.cpp.o
+
+suite_sparse_sparse_qr/main.i: suite_sparse_sparse_qr/main.cpp.i
+.PHONY : suite_sparse_sparse_qr/main.i
+
+# target to preprocess a source file
+suite_sparse_sparse_qr/main.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dynamic_qr_benchmark.dir/build.make CMakeFiles/dynamic_qr_benchmark.dir/suite_sparse_sparse_qr/main.cpp.i
+.PHONY : suite_sparse_sparse_qr/main.cpp.i
+
+suite_sparse_sparse_qr/main.s: suite_sparse_sparse_qr/main.cpp.s
+.PHONY : suite_sparse_sparse_qr/main.s
+
+# target to generate assembly for a file
+suite_sparse_sparse_qr/main.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dynamic_qr_benchmark.dir/build.make CMakeFiles/dynamic_qr_benchmark.dir/suite_sparse_sparse_qr/main.cpp.s
+.PHONY : suite_sparse_sparse_qr/main.cpp.s
+
 suite_sparse_sparse_qr/qr_conflict_analyzer.o: suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.o
 .PHONY : suite_sparse_sparse_qr/qr_conflict_analyzer.o
 
 # target to build an object file
 suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/my_solver.dir/build.make CMakeFiles/my_solver.dir/suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_conflict_benchmark.dir/build.make CMakeFiles/qr_conflict_benchmark.dir/suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_givens_benchmark.dir/build.make CMakeFiles/qr_givens_benchmark.dir/suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.o
 .PHONY : suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.o
 
 suite_sparse_sparse_qr/qr_conflict_analyzer.i: suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.i
@@ -167,6 +280,8 @@ suite_sparse_sparse_qr/qr_conflict_analyzer.i: suite_sparse_sparse_qr/qr_conflic
 # target to preprocess a source file
 suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/my_solver.dir/build.make CMakeFiles/my_solver.dir/suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_conflict_benchmark.dir/build.make CMakeFiles/qr_conflict_benchmark.dir/suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_givens_benchmark.dir/build.make CMakeFiles/qr_givens_benchmark.dir/suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.i
 .PHONY : suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.i
 
 suite_sparse_sparse_qr/qr_conflict_analyzer.s: suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.s
@@ -175,6 +290,8 @@ suite_sparse_sparse_qr/qr_conflict_analyzer.s: suite_sparse_sparse_qr/qr_conflic
 # target to generate assembly for a file
 suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/my_solver.dir/build.make CMakeFiles/my_solver.dir/suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_conflict_benchmark.dir/build.make CMakeFiles/qr_conflict_benchmark.dir/suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_givens_benchmark.dir/build.make CMakeFiles/qr_givens_benchmark.dir/suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.s
 .PHONY : suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.s
 
 # Help Target
@@ -185,10 +302,22 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... dynamic_qr_benchmark"
 	@echo "... my_solver"
+	@echo "... qr_conflict_benchmark"
+	@echo "... qr_givens_benchmark"
 	@echo "... example.o"
 	@echo "... example.i"
 	@echo "... example.s"
+	@echo "... suite_sparse_sparse_qr/benchmark_conflict_detection.o"
+	@echo "... suite_sparse_sparse_qr/benchmark_conflict_detection.i"
+	@echo "... suite_sparse_sparse_qr/benchmark_conflict_detection.s"
+	@echo "... suite_sparse_sparse_qr/benchmark_givens_updates.o"
+	@echo "... suite_sparse_sparse_qr/benchmark_givens_updates.i"
+	@echo "... suite_sparse_sparse_qr/benchmark_givens_updates.s"
+	@echo "... suite_sparse_sparse_qr/main.o"
+	@echo "... suite_sparse_sparse_qr/main.i"
+	@echo "... suite_sparse_sparse_qr/main.s"
 	@echo "... suite_sparse_sparse_qr/qr_conflict_analyzer.o"
 	@echo "... suite_sparse_sparse_qr/qr_conflict_analyzer.i"
 	@echo "... suite_sparse_sparse_qr/qr_conflict_analyzer.s"

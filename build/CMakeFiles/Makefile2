@@ -64,6 +64,9 @@ CMAKE_BINARY_DIR = /home/nandan_diwan/Desktop/optimization/argon_solver/build
 
 # The main recursive "all" target.
 all: CMakeFiles/my_solver.dir/all
+all: CMakeFiles/qr_conflict_benchmark.dir/all
+all: CMakeFiles/qr_givens_benchmark.dir/all
+all: CMakeFiles/dynamic_qr_benchmark.dir/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
@@ -72,6 +75,9 @@ preinstall:
 
 # The main recursive "clean" target.
 clean: CMakeFiles/my_solver.dir/clean
+clean: CMakeFiles/qr_conflict_benchmark.dir/clean
+clean: CMakeFiles/qr_givens_benchmark.dir/clean
+clean: CMakeFiles/dynamic_qr_benchmark.dir/clean
 .PHONY : clean
 
 #=============================================================================
@@ -81,7 +87,7 @@ clean: CMakeFiles/my_solver.dir/clean
 CMakeFiles/my_solver.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/my_solver.dir/build.make CMakeFiles/my_solver.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/my_solver.dir/build.make CMakeFiles/my_solver.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles --progress-num=1,2,3 "Built target my_solver"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles --progress-num=3,4,5 "Built target my_solver"
 .PHONY : CMakeFiles/my_solver.dir/all
 
 # Build rule for subdir invocation for target.
@@ -99,6 +105,84 @@ my_solver: CMakeFiles/my_solver.dir/rule
 CMakeFiles/my_solver.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/my_solver.dir/build.make CMakeFiles/my_solver.dir/clean
 .PHONY : CMakeFiles/my_solver.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/qr_conflict_benchmark.dir
+
+# All Build rule for target.
+CMakeFiles/qr_conflict_benchmark.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_conflict_benchmark.dir/build.make CMakeFiles/qr_conflict_benchmark.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_conflict_benchmark.dir/build.make CMakeFiles/qr_conflict_benchmark.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles --progress-num=6,7,8 "Built target qr_conflict_benchmark"
+.PHONY : CMakeFiles/qr_conflict_benchmark.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/qr_conflict_benchmark.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles 3
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/qr_conflict_benchmark.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles 0
+.PHONY : CMakeFiles/qr_conflict_benchmark.dir/rule
+
+# Convenience name for target.
+qr_conflict_benchmark: CMakeFiles/qr_conflict_benchmark.dir/rule
+.PHONY : qr_conflict_benchmark
+
+# clean rule for target.
+CMakeFiles/qr_conflict_benchmark.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_conflict_benchmark.dir/build.make CMakeFiles/qr_conflict_benchmark.dir/clean
+.PHONY : CMakeFiles/qr_conflict_benchmark.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/qr_givens_benchmark.dir
+
+# All Build rule for target.
+CMakeFiles/qr_givens_benchmark.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_givens_benchmark.dir/build.make CMakeFiles/qr_givens_benchmark.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_givens_benchmark.dir/build.make CMakeFiles/qr_givens_benchmark.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles --progress-num=9,10,11 "Built target qr_givens_benchmark"
+.PHONY : CMakeFiles/qr_givens_benchmark.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/qr_givens_benchmark.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles 3
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/qr_givens_benchmark.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles 0
+.PHONY : CMakeFiles/qr_givens_benchmark.dir/rule
+
+# Convenience name for target.
+qr_givens_benchmark: CMakeFiles/qr_givens_benchmark.dir/rule
+.PHONY : qr_givens_benchmark
+
+# clean rule for target.
+CMakeFiles/qr_givens_benchmark.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/qr_givens_benchmark.dir/build.make CMakeFiles/qr_givens_benchmark.dir/clean
+.PHONY : CMakeFiles/qr_givens_benchmark.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/dynamic_qr_benchmark.dir
+
+# All Build rule for target.
+CMakeFiles/dynamic_qr_benchmark.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dynamic_qr_benchmark.dir/build.make CMakeFiles/dynamic_qr_benchmark.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dynamic_qr_benchmark.dir/build.make CMakeFiles/dynamic_qr_benchmark.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles --progress-num=1,2 "Built target dynamic_qr_benchmark"
+.PHONY : CMakeFiles/dynamic_qr_benchmark.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/dynamic_qr_benchmark.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles 2
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/dynamic_qr_benchmark.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/nandan_diwan/Desktop/optimization/argon_solver/build/CMakeFiles 0
+.PHONY : CMakeFiles/dynamic_qr_benchmark.dir/rule
+
+# Convenience name for target.
+dynamic_qr_benchmark: CMakeFiles/dynamic_qr_benchmark.dir/rule
+.PHONY : dynamic_qr_benchmark
+
+# clean rule for target.
+CMakeFiles/dynamic_qr_benchmark.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dynamic_qr_benchmark.dir/build.make CMakeFiles/dynamic_qr_benchmark.dir/clean
+.PHONY : CMakeFiles/dynamic_qr_benchmark.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

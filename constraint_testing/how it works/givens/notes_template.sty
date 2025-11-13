@@ -1,0 +1,124 @@
+% --- Custom LaTeX Notes Template (Corrected) ---
+\ProvidesPackage{notes_template}
+
+% --- Package Imports ---
+\usepackage[dvipsnames]{xcolor}
+\usepackage{
+    amsmath, amsthm, amssymb, mathtools, dsfont, units,
+    graphicx, wrapfig, subfig, float,
+    listings, color, inconsolata,
+    fancyhdr, sectsty, hyperref, enumerate, enumitem, framed, graphicx,float
+}
+
+% --- Font Settings ---
+\usepackage{newpxtext, newpxmath, inconsolata}
+
+% --- Page Layout ---
+\usepackage[
+    letterpaper,
+    left=1in, right=1in, top=1.0in, bottom=.9in,
+    headsep=.2in, footskip=0.35in
+]{geometry}
+\usepackage[bottom]{footmisc}
+\renewcommand{\baselinestretch}{1.2}
+\setlength{\parskip}{1.3mm}
+\allowdisplaybreaks
+
+% --- Page Formatting ---
+\usepackage[font={it,footnotesize}]{caption}
+\hypersetup{colorlinks=true, linkcolor=RoyalBlue, citecolor=RedOrange, urlcolor=ForestGreen}
+
+% --- Section Title Formatting ---
+\usepackage{titlesec}
+% CORRECTED: Replaced undefined \textreferencemark with \thesection
+\titleformat{\section}{\large\bfseries}{\fontsize{19}{19}\selectfont\thesection\;\;}{0em}{}
+\titleformat{\subsection}{\normalsize\bfseries\selectfont}{\thesubsection\;\;\;}{0em}{}
+\setlist[itemize]{wide=0pt, leftmargin=16pt, labelwidth=10pt, align=left}
+
+% --- Table of Contents Settings ---
+\usepackage[subfigure]{tocloft}
+\setlength{\cftbeforesecskip}{.9ex}
+\cftsetindents{section}{0em}{0em}
+\renewcommand{\cfttoctitlefont}{\large\bfseries}
+\makeatletter
+\renewcommand{\cftsecpresnum}{\begin{lrbox}{\@tempboxa}}
+\renewcommand{\cftsecaftersnum}{\end{lrbox}}
+\makeatother
+
+% --- Math Commands ---
+\newcommand{\R}{\mathbb{R}}      % Real numbers
+\newcommand{\C}{\mathbb{C}}      % Complex numbers
+\newcommand{\Q}{\mathbb{Q}}      % Rational numbers
+\newcommand{\Z}{\mathbb{Z}}      % Integers
+\newcommand{\N}{\mathbb{N}}      % Natural numbers
+\newcommand{\pr}{\mathbb{P}}     % Probability measure
+\newcommand{\E}{\mathbb{E}}      % Expectation
+\newcommand{\var}{\text{Var}}    % Variance
+\newcommand{\cov}{\text{Cov}}    % Covariance
+
+\newcommand{\imint}{\int_{-\infty}^{\infty}}
+\newcommand{\defaint}{\int_{-a}^{a}}
+\newcommand{\sphint}{\int_{0}^{2\pi}\int_0^{\pi}}
+\newcommand{\hatA}{\hat{A}}
+\newcommand{\hatC}{\hat{C}}
+\newcommand{\hatB}{\hat{B}}
+% Quantum mechanics shortcuts
+\newcommand{\spinup}{\begin{pmatrix} 1 \\ 0 \end{pmatrix}}
+\newcommand{\spindown}{\begin{pmatrix} 0 \\ 1 \end{pmatrix}}
+\newcommand{\pauliz}{\begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix}}
+\newcommand{\paulix}{\begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}}
+\newcommand{\pauliy}{\begin{pmatrix} 0 & -i \\ i & 0 \end{pmatrix}}
+
+% --- Theorem-like Environments ---
+% CORRECTED: Fixed typo `heoremstyle` to `\theoremstyle`
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+
+% --- Python Code Listings ---
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!40!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=tb,
+    tabsize=4,
+    emph={sympy,diff,simplify,integrate,exp,sqrt,conjugate,doit},
+    emphstyle=\color{magenta},
+    literate={~} {$\sim$}{1}
+}
+
+% --- Header and Footer ---
+\pagestyle{fancy}
+% ADDED: Set headheight to prevent common fancyhdr package warning
+\setlength{\headheight}{14pt} 
+\renewcommand{\footrulewidth}{0pt}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\sectionmark}[1]{\markright{#1}}
+\fancyhf{} % Clear all header and footer fields
+\fancyhead[R]{\small\textit{\nouppercase{\rightmark}}}
+\fancyhead[L]{\small Physics 137B}
+\cfoot{\thepage} % Page number in the center footer
+
+% --- Custom Document Commands ---
+\newcommand{\makeheader}[3]{
+    \title{#1}
+    \author{#2}
+    \date{\normalsize #3}
+    \maketitle
+}

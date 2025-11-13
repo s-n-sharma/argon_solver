@@ -1,0 +1,2 @@
+/usr/bin/ar qc libqr_conflict_analyzer.a CMakeFiles/qr_conflict_analyzer.dir/suite_sparse_sparse_qr/qr_conflict_analyzer.cpp.o
+/usr/bin/ranlib libqr_conflict_analyzer.a
